@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from personal_musicgen.data import connectors
 
-DATA_DIR = './data/wav/'
+DATA_DIR = './data/mp3/'
 
 load_dotenv()
 

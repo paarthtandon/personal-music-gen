@@ -1,9 +1,9 @@
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import yt_dlp
-from tqdm import tqdm
 
 def get_saved_tracks_spotify(
         client_id: str,
@@ -49,10 +49,7 @@ def download_songs_from_youtube(
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
-            'preferredquality': '32'
-        }, {
-            'key': 'FFmpegExtractAudio',
-            'preferredcodec': 'wav'
+            'preferredquality': '128'
         }],
         'outtmpl': os.path.join(download_dir, '%(title)s.%(ext)s'),
         'default_search': 'ytsearch1:',
@@ -62,8 +59,23 @@ def download_songs_from_youtube(
         'ffmpeg_location': ffmpeg_loc
     }
 
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        for i, track_string in enumerate(track_strings):
+    def download_song(track_string, ydl_opts):
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([track_string])
-            if i % 10 == 0:
-                print(f'Downloaded {i + 1}/{len(track_strings)} songs')
+
+    download_count = 0
+
+    with ThreadPoolExecutor(max_workers=6) as executor:
+        future_to_track = {executor.submit(
+            download_song, track, ydl_opts
+        ): track for track in track_strings}
+
+        for future in as_completed(future_to_track):
+            track = future_to_track[future]
+            try:
+                future.result()  # Wait for each download to complete
+                download_count += 1  # Increment the counter
+                if download_count % 100 == 0:  # Check if the counter is a multiple of 100
+                    print(f'Downloaded {download_count}/{len(track_strings)} tracks.')
+            except Exception as e:
+                print(f"Failed to download {track}: {e}")
