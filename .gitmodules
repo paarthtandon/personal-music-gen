@@ -1,3 +1,6 @@
 [submodule "libs/audiocraft"]
 	path = libs/audiocraft
 	url = https://github.com/facebookresearch/audiocraft.git
+[submodule "libs/demucs"]
+	path = libs/demucs
+	url = https://github.com/facebookresearch/demucs.git
