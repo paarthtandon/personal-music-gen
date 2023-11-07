@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 import random
 
+import demucs.api
+
 @dataclass
 class SpeechClassifierOutput(ModelOutput):
     loss: Optional[torch.FloatTensor] = None
@@ -135,6 +137,7 @@ class Postprocessor:
         self.detect_genre = detect_genre
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.target_sample_rate = 32_000
 
         if self.detect_genre:
             genre_model_name = 'm3hrdadfi/wav2vec2-base-100k-gtzan-music-genres'
@@ -143,6 +146,9 @@ class Postprocessor:
             self.sampling_rate = self.feature_extractor.sampling_rate
             self.genre_model = Wav2Vec2ForAudioClassification \
                             .from_pretrained(genre_model_name).to(self.device)
+        
+        if self.remove_voice:
+            self.separator = demucs.api.Separator()
     
     def predict_genre(self, path):
         waveform, sample_rate = torchaudio.load(path)
@@ -170,3 +176,8 @@ class Postprocessor:
                 for i, score in enumerate(scores)
         ]
         return preds
+    
+    def separate_voice(self, path):
+        original, separated = self.separator.separate_audio_file(path)
+        no_voice = separated['bass'] + separated['drums'] + separated['other']
+        return original, no_voice, self.separator.samplerate
