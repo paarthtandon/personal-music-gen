@@ -49,6 +49,7 @@ def train_step(
         dataloader: DataLoader,
         grad_acc_steps: int
 ) -> dict:
+    model.lm.train()
     device = model.device
     
     total_loss = 0
@@ -79,7 +80,6 @@ def train_step(
             scaler.scale(loss).backward()
             
             total_loss += loss.item()
-            print(loss.item())
 
             if (i + 1) % grad_acc_steps == 0:
                 scaler.unscale_(optimizer)
@@ -90,4 +90,43 @@ def train_step(
 
     return {
         'train_loss': total_loss / len(dataloader)
+    }
+
+def eval_step(
+        model: MusicGen,
+        dataloader: DataLoader
+) -> dict:
+    model.lm.eval()
+    device = model.device
+    
+    total_loss = 0
+
+    with torch.no_grad():
+        for i, (audio_fns, label_fns) in tqdm(enumerate(dataloader), total=len(dataloader)):
+            codes_l = []
+            text_l = []
+
+            for audio_fn, label_fn in zip(audio_fns, label_fns):
+                codes = encode_audio(model, audio_fn)
+                codes_l.append(codes)
+                with open(label_fn, 'r') as label_f:
+                    text_l.append(label_f.read().strip())
+            
+            codes = torch.cat(codes_l, dim=0).to(device)
+
+            attributes, _ = model._prepare_tokens_and_attributes(text_l, None)
+            conditional_vector = get_contitional_vector(model, attributes)
+
+            with torch.autocast(device_type="cuda", dtype=torch.float16):
+                lm_output = model.lm.compute_predictions(
+                    codes=codes,
+                    conditions=[],
+                    condition_tensors=conditional_vector
+                )
+
+                loss = compute_masked_loss(lm_output, codes)
+                total_loss += loss.item()
+
+    return {
+        'eval_loss': total_loss / len(dataloader)
     }
