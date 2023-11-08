@@ -17,12 +17,14 @@ import re
 
 import demucs.api
 
+
 @dataclass
 class SpeechClassifierOutput(ModelOutput):
     loss: Optional[torch.FloatTensor] = None
     logits: torch.FloatTensor = None
     hidden_states: Optional[Tuple[torch.FloatTensor]] = None
     attentions: Optional[Tuple[torch.FloatTensor]] = None
+
 
 class Wav2Vec2ClassificationHead(nn.Module):
     """Head for wav2vec classification task."""
@@ -94,7 +96,8 @@ class Wav2Vec2ForAudioClassification(Wav2Vec2PreTrainedModel):
             return_dict=return_dict,
         )
         hidden_states = outputs[0]
-        hidden_states = self.merged_strategy(hidden_states, mode=self.pooling_mode)
+        hidden_states = self.merged_strategy(
+            hidden_states, mode=self.pooling_mode)
         logits = self.classifier(hidden_states)
 
         loss = None
@@ -112,7 +115,8 @@ class Wav2Vec2ForAudioClassification(Wav2Vec2PreTrainedModel):
                 loss = loss_fct(logits.view(-1, self.num_labels), labels)
             elif self.config.problem_type == "single_label_classification":
                 loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
+                loss = loss_fct(
+                    logits.view(-1, self.num_labels), labels.view(-1))
             elif self.config.problem_type == "multi_label_classification":
                 loss_fct = nn.BCEWithLogitsLoss()
                 loss = loss_fct(logits, labels)
@@ -128,23 +132,26 @@ class Wav2Vec2ForAudioClassification(Wav2Vec2PreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class Postprocessor:
 
     def __init__(
             self
     ):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device(
+            'cuda' if torch.cuda.is_available() else 'cpu')
         self.target_sample_rate = 32_000
 
         genre_model_name = 'm3hrdadfi/wav2vec2-base-100k-gtzan-music-genres'
         self.genre_config = AutoConfig.from_pretrained(genre_model_name)
-        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(genre_model_name)
+        self.feature_extractor = Wav2Vec2FeatureExtractor.from_pretrained(
+            genre_model_name)
         self.sampling_rate = self.feature_extractor.sampling_rate
         self.genre_model = Wav2Vec2ForAudioClassification \
-                        .from_pretrained(genre_model_name).to(self.device)
-        
+            .from_pretrained(genre_model_name).to(self.device)
+
         self.separator = demucs.api.Separator()
-    
+
     def predict_genre(self, path):
         waveform, sample_rate = torchaudio.load(path)
         resampler = torchaudio.transforms.Resample(sample_rate)
@@ -153,8 +160,10 @@ class Postprocessor:
         clip_length = 5  # seconds
         num_samples_in_clip = sample_rate * clip_length
 
-        start_sample = random.randint(0, waveform.size(1) - num_samples_in_clip)
-        random_clip = waveform[:, start_sample:start_sample + num_samples_in_clip]
+        start_sample = random.randint(
+            0, waveform.size(1) - num_samples_in_clip)
+        random_clip = waveform[:,
+                               start_sample:start_sample + num_samples_in_clip]
         random_clip = random_clip.squeeze().numpy()
 
         inputs = self.feature_extractor(
@@ -167,18 +176,19 @@ class Postprocessor:
 
         scores = F.softmax(logits, dim=1).detach().cpu().numpy()[0]
         preds = [
-            {"Label": self.genre_config.id2label[i], "Score": score} \
-                for i, score in enumerate(scores)
+            {"Label": self.genre_config.id2label[i], "Score": score}
+            for i, score in enumerate(scores)
         ]
         return preds
-    
+
     def save_chunks(self, track_name, chunk, folder_path, genre, signal_type):
         filename = f"{track_name}_{signal_type}.wav"
         text_filename = f"{track_name}_{signal_type}.txt"
-        
+
         # Save the chunk as a wav file
-        torchaudio.save(os.path.join(folder_path, filename), chunk, self.target_sample_rate)
-        
+        torchaudio.save(os.path.join(folder_path, filename),
+                        chunk, self.target_sample_rate)
+
         # Save the genre in a text file
         with open(os.path.join(folder_path, text_filename), 'w') as txt_file:
             txt_file.write(f"personal, {genre}")
@@ -187,31 +197,33 @@ class Postprocessor:
         # Apply the voice removal to the provided chunk
         _, separated = self.separator.separate_tensor(chunk)
         no_voice = separated['bass'] + separated['drums'] + separated['other']
-        
+
         # Ensure no_voice is in the correct shape (channels, samples)
         no_voice = no_voice if no_voice.dim() == 2 else no_voice.unsqueeze(0)
-        
+
         # Resample the no_voice part to the target sample rate
         # resampler = torchaudio.transforms.Resample(
         #     orig_freq=self.separator.samplerate, new_freq=self.target_sample_rate
         # )
-        no_voice_resampled = no_voice #resampler(no_voice)
-        
+        no_voice_resampled = no_voice  # resampler(no_voice)
+
         # Save the no_voice chunk and the associated text file
-        self.save_chunks(track_name, no_voice_resampled, folder_path, genre, 'no_voice')
+        self.save_chunks(track_name, no_voice_resampled,
+                         folder_path, genre, 'no_voice')
 
     def postprocess(self, path, original_folder, no_voice_folder, max_chunks=None):
         genre_preds = self.predict_genre(path)
-        top_genre = sorted(genre_preds, key=lambda x: x['Score'], reverse=True)[0]['Label']
+        top_genre = sorted(genre_preds, key=lambda x: x['Score'], reverse=True)[
+            0]['Label']
 
         waveform, sample_rate = torchaudio.load(path)
-        
+
         # Resample the full track before chunking
         resampler = torchaudio.transforms.Resample(
             orig_freq=sample_rate, new_freq=self.target_sample_rate
         )
         waveform = resampler(waveform)
-        
+
         chunk_size = self.target_sample_rate * 30
         num_possible_chunks = waveform.shape[1] // chunk_size
 
@@ -234,5 +246,7 @@ class Postprocessor:
                 track_base = re.sub(r'[\d_]', '', track_base).lower()
                 track_chunk_name = f"{track_base}_chunk_{i}"
 
-                self.save_chunks(track_chunk_name, chunk, original_folder, top_genre, 'original')
-                self.remove_voice_and_save(track_chunk_name, chunk, no_voice_folder, top_genre)
+                self.save_chunks(track_chunk_name, chunk,
+                                 original_folder, top_genre, 'original')
+                self.remove_voice_and_save(
+                    track_chunk_name, chunk, no_voice_folder, top_genre)

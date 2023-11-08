@@ -1,6 +1,7 @@
 from torch.utils.data import Dataset
 import os
 
+
 class AudioDataset(Dataset):
     def __init__(self, data_dir, no_label=False):
         self.data_dir = data_dir
@@ -32,4 +33,3 @@ class AudioDataset(Dataset):
         label = data.get("label", "")
 
         return audio, label
-    
