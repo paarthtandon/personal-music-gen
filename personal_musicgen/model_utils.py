@@ -9,6 +9,7 @@ from audiocraft.models import MusicGen
 from audiocraft.models.lm import LMOutput
 from audiocraft.modules.conditioners import ClassifierFreeGuidanceDropout
 
+import wandb
 from tqdm import tqdm
 
 
@@ -54,7 +55,9 @@ def train_step(
     
     total_loss = 0
 
-    for i, (audio_fns, label_fns) in tqdm(enumerate(dataloader), total=len(dataloader)):
+    for i, (audio_fns, label_fns) in tqdm(
+        enumerate(dataloader), total=len(dataloader), desc='Train'
+    ):
         codes_l = []
         text_l = []
 
@@ -80,6 +83,9 @@ def train_step(
             scaler.scale(loss).backward()
             
             total_loss += loss.item()
+            wandb.log({
+                'ins_train_loss': loss.item()
+            })
 
             if (i + 1) % grad_acc_steps == 0:
                 scaler.unscale_(optimizer)
@@ -102,7 +108,9 @@ def eval_step(
     total_loss = 0
 
     with torch.no_grad():
-        for i, (audio_fns, label_fns) in tqdm(enumerate(dataloader), total=len(dataloader)):
+        for i, (audio_fns, label_fns) in tqdm(
+            enumerate(dataloader), total=len(dataloader), desc='Eval'
+        ):
             codes_l = []
             text_l = []
 
@@ -130,3 +138,38 @@ def eval_step(
     return {
         'eval_loss': total_loss / len(dataloader)
     }
+
+def generate(
+        model: MusicGen,
+        text_prompt: str,
+        n_extensions: int,
+        temp: float = 1.0,
+        top_k: int= 250,
+        top_p: float = 0.0
+):
+    model.generation_params = {
+        'max_gen_len': int(30 * model.frame_rate),
+        'use_sampling': True,
+        'temp': temp,
+        'top_k': top_k,
+        'top_p': top_p,
+        'cfg_coef': 3,
+        'two_step_cfg': 0,
+    }
+
+    attributes, prompt_tokens = model._prepare_tokens_and_attributes([text_prompt], None)
+    gen_chunks = []
+    for _ in tqdm(range(n_extensions)):
+        with model.autocast:
+            gen_tokens = model.lm.generate(prompt_tokens, attributes, callback=None, **model.generation_params)
+            gen_chunks.append(
+                gen_tokens[..., prompt_tokens.shape[-1] if prompt_tokens is not None else 0:]
+            )
+            prompt_tokens = gen_tokens[..., -gen_tokens.shape[-1] // 2:]
+    gen_tokens = torch.cat(gen_chunks, -1)
+
+    with torch.no_grad():
+        gen_audio = model.compression_model.decode(gen_tokens, None)
+    gen_audio = gen_audio.cpu()
+
+    return gen_audio
