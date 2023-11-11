@@ -36,6 +36,72 @@ def get_saved_tracks_spotify(
 
     return songs
 
+def get_playlist_tracks_spotify(
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        playlist_id: str,
+        limit: int = None
+) -> list:
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope='playlist-read-private'
+        ))
+    
+    offset = 0
+    songs = []
+    while True:
+        if limit is not None and len(songs) >= limit:
+            break
+        results = sp.playlist_tracks(playlist_id, limit=50, offset=offset)
+        if not results['items']:
+            break
+
+        for item in results['items']:
+            track = item['track']
+            if track:  # Check if track exists (playlist might have null tracks)
+                song_name = track['name']
+                artist_name = track['artists'][0]['name']
+                songs.append(f'{artist_name} - {song_name}')
+
+        offset += 50
+
+    return songs
+
+def get_album_tracks_spotify(
+        client_id: str,
+        client_secret: str,
+        redirect_uri: str,
+        album_id: str,
+        limit: int = None
+) -> list:
+    sp = spotipy.Spotify(auth_manager=SpotifyOAuth(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            scope='user-library-read'
+        ))
+    
+    offset = 0
+    songs = []
+    while True:
+        if limit is not None and len(songs) >= limit:
+            break
+        results = sp.album_tracks(album_id, limit=50, offset=offset)
+        if not results['items']:
+            break
+
+        for item in results['items']:
+            song_name = item['name']
+            artist_name = item['artists'][0]['name']
+            songs.append(f'{artist_name} - {song_name}')
+
+        offset += 50
+
+    return songs
+
 def download_songs_from_youtube(
         track_strings: list,
         download_dir: str,

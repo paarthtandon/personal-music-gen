@@ -191,7 +191,7 @@ class Postprocessor:
 
         # Save the genre in a text file
         with open(os.path.join(folder_path, text_filename), 'w') as txt_file:
-            txt_file.write(f"personal, {genre}")
+            txt_file.write(f"personal {genre}".strip())
 
     def remove_voice_and_save(self, track_name, chunk, folder_path, genre):
         # Apply the voice removal to the provided chunk
@@ -211,10 +211,13 @@ class Postprocessor:
         self.save_chunks(track_name, no_voice_resampled,
                          folder_path, genre, 'no_voice')
 
-    def postprocess(self, path, original_folder, no_voice_folder, max_chunks=None):
-        genre_preds = self.predict_genre(path)
-        top_genre = sorted(genre_preds, key=lambda x: x['Score'], reverse=True)[
-            0]['Label']
+    def postprocess(self, path, original_folder, no_voice_folder, max_chunks=None, pred_genre=True):
+        if pred_genre:
+            genre_preds = self.predict_genre(path)
+            top_genre = sorted(genre_preds, key=lambda x: x['Score'], reverse=True)[
+                0]['Label']
+        else:
+            top_genre = ''
 
         waveform, sample_rate = torchaudio.load(path)
 

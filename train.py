@@ -11,20 +11,24 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-DATA_DIR = './data/chunks_no_voice'
+RUN_NAME = 'eyedazzler_no_voice'
+DATA_DIR = './data/eyedazzler/chunks_no_voice'
 CHECKPOINT_DIR = './checkpoints'
-START_WEIGHTS = './experimental_results/liked_songs_no_voice_one_epoch/model.pth'
+START_WEIGHTS = None
+TOTAL_DATA_RATIO = 1
 EVAL_DATA_RATIO = 0
-EPOCHS = 1
+EPOCHS = 20
 BATCH_SIZE = 1
-GRAD_ACC_STEPS = 64
-LR = 1e-5
+GRAD_ACC_STEPS = 1
+LR = 1e-4
 
 run = wandb.init(
     project = 'personal-musicgen',
+    name = RUN_NAME,
     config = {
         'dataset': DATA_DIR,
         'start_weights': START_WEIGHTS,
+        'total_data_ratio': TOTAL_DATA_RATIO,
         'eval_data_ratio': EVAL_DATA_RATIO,
         'epochs': EPOCHS,
         'batch_size': BATCH_SIZE,
@@ -42,7 +46,7 @@ torch.manual_seed(42)
 
 dataset = AudioDataset(DATA_DIR)
 indices = torch.randperm(len(dataset)).tolist()
-shuffled_dataset = Subset(dataset, indices)
+shuffled_dataset = Subset(dataset, indices[:int(len(indices) * TOTAL_DATA_RATIO)])
 
 train_len = int(len(shuffled_dataset) * (1 - EVAL_DATA_RATIO))
 train_dataset = Subset(shuffled_dataset, range(train_len))

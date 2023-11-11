@@ -4,8 +4,8 @@ from pathlib import Path
 from tqdm import tqdm
 
 ffmpeg_location = './ffmpeg-6/bin/ffmpeg.exe'
-source_dir = Path('data/mp3')
-target_dir = Path('data/wav_32k')
+source_dir = Path('data/eyedazzler/mp3')
+target_dir = Path('data/eyedazzler/wav_32k')
 target_dir.mkdir(parents=True, exist_ok=True)
 
 mp3_files = list(source_dir.glob('*.mp3'))
