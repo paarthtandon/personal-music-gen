@@ -11,16 +11,16 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-RUN_NAME = 'eyedazzler_no_voice'
+RUN_NAME = 'eyedazzler_no_voice_50_100'
 DATA_DIR = './data/eyedazzler/chunks_no_voice'
 CHECKPOINT_DIR = './checkpoints'
-START_WEIGHTS = None
-TOTAL_DATA_RATIO = 1
+START_WEIGHTS = './experimental_results/eyedazzler/no_voice_50_epochs/checkpoint_50.pth'
+TOTAL_DATA_RATIO = 1.0
 EVAL_DATA_RATIO = 0
-EPOCHS = 20
+EPOCHS = 200
 BATCH_SIZE = 1
-GRAD_ACC_STEPS = 1
-LR = 1e-4
+GRAD_ACC_STEPS = 16
+LR = 1e-5
 
 run = wandb.init(
     project = 'personal-musicgen',
@@ -74,16 +74,25 @@ if START_WEIGHTS != None:
 print(f'{device=}')
 
 optimizer = AdamW(
-    model.lm.parameters(),
+    model.lm.condition_provider.parameters(),
     lr=LR,
     betas=(0.9, 0.95),
     weight_decay=0.1,
 )
+
+if START_WEIGHTS != None:
+    optimizer.load_state_dict(torch.load(START_WEIGHTS)['optimizer_state_dict'])
+
 scaler = GradScaler()
 
 ########## Training ##########
 
-for epoch in range(EPOCHS):
+if START_WEIGHTS != None:
+    start_epoch = torch.load(START_WEIGHTS)['epoch']
+else:
+    start_epoch = 0
+
+for epoch in range(start_epoch, EPOCHS):
     print(f'epoch {epoch}/{EPOCHS}')
 
     train_loss = train_step(
@@ -109,10 +118,12 @@ for epoch in range(EPOCHS):
             'epoch': epoch,
             'eval_loss': eval_loss
         })
-
-    checkpoint_path = os.path.join(CHECKPOINT_DIR + f'/{run.id}', f'checkpoint_{epoch}.pth')
-    torch.save({
-        'epoch': epoch,
-        'model_state_dict': model.lm.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict()
-    }, checkpoint_path)
+    
+    if (epoch + 1) % 25 == 0:
+        checkpoint_path = os.path.join(CHECKPOINT_DIR + f'/{run.id}', f'checkpoint_{epoch}.pth')
+        print(f'Saving to {checkpoint_path}...')
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': model.lm.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()
+        }, checkpoint_path)
