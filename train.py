@@ -11,13 +11,13 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-RUN_NAME = 'eyedazzler_no_voice_50_100'
+RUN_NAME = 'eyedazzler_no_voice_574_1000'
 DATA_DIR = './data/eyedazzler/chunks_no_voice'
 CHECKPOINT_DIR = './checkpoints'
-START_WEIGHTS = './experimental_results/eyedazzler/no_voice_50_epochs/checkpoint_50.pth'
+START_WEIGHTS = './experimental_results/eyedazzler/no_voice_574_epochs/checkpoint_574.pth'
 TOTAL_DATA_RATIO = 1.0
 EVAL_DATA_RATIO = 0
-EPOCHS = 200
+EPOCHS = 1000
 BATCH_SIZE = 1
 GRAD_ACC_STEPS = 16
 LR = 1e-5
@@ -40,7 +40,7 @@ run = wandb.init(
 if not os.path.exists(CHECKPOINT_DIR + f'/{run.id}'):
     os.makedirs(CHECKPOINT_DIR + f'/{run.id}')
 
-torch.manual_seed(42)
+torch.manual_seed(222)
 
 ########## Data Setup ##########
 
