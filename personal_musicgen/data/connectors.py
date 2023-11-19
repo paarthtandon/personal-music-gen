@@ -15,7 +15,8 @@ def get_saved_tracks_spotify(
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scope='user-library-read'
+            scope='user-library-read',
+            open_browser=False
         ))
     
     offset = 0
@@ -47,7 +48,8 @@ def get_playlist_tracks_spotify(
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scope='playlist-read-private'
+            scope='playlist-read-private',
+            open_browser=False
         ))
     
     offset = 0
@@ -81,7 +83,8 @@ def get_album_tracks_spotify(
             client_id=client_id,
             client_secret=client_secret,
             redirect_uri=redirect_uri,
-            scope='user-library-read'
+            scope='user-library-read',
+            open_browser=False
         ))
     
     offset = 0
@@ -105,7 +108,7 @@ def get_album_tracks_spotify(
 def download_songs_from_youtube(
         track_strings: list,
         download_dir: str,
-        ffmpeg_loc: str
+        # ffmpeg_loc: str
 ) -> None:
     if not os.path.isdir(download_dir):
         os.makedirs(download_dir)
@@ -122,7 +125,7 @@ def download_songs_from_youtube(
         'quiet': True,
         'no_warnings': False,
         'ignoreerrors': False,
-        'ffmpeg_location': ffmpeg_loc
+        # 'ffmpeg_location': ffmpeg_loc
     }
 
     def download_song(track_string, ydl_opts):
