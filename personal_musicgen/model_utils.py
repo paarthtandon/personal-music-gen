@@ -13,9 +13,10 @@ import wandb
 from tqdm import tqdm
 
 
-def get_contitional_vector(model: MusicGen, attributes: torch.Tensor) -> dict:
-    null_conditions = ClassifierFreeGuidanceDropout(p=1.0)(attributes)
-    attributes = attributes + null_conditions
+def get_contitional_vector(model: MusicGen, attributes: torch.Tensor, use_cfg:bool = False) -> dict:
+    if use_cfg:
+        null_conditions = ClassifierFreeGuidanceDropout(p=1.0)(attributes)
+        attributes = attributes + null_conditions
     tokenized = model.lm.condition_provider.tokenize(attributes)
     cfg_conditions = model.lm.condition_provider(tokenized)
     
@@ -23,9 +24,13 @@ def get_contitional_vector(model: MusicGen, attributes: torch.Tensor) -> dict:
 
 def encode_audio(model: MusicGen, wav_file: str) -> torch.Tensor:
     wav, _ = torchaudio.load(wav_file)
-    wav_single_channel = wav.to(model.device).mean(dim=0, keepdim=True).unsqueeze(1)
-    codes, _ = model.compression_model.encode(wav_single_channel)
+    wav = wav.to(model.device).mean(dim=0, keepdim=True)
+    wav = wav.unsqueeze(1)
 
+    assert wav.shape[0] == 1
+
+    with torch.no_grad():
+        codes, _ = model.compression_model.encode(wav)
     return codes
 
 def compute_masked_loss(lm_output: LMOutput, codes: torch.Tensor) -> torch.Tensor:
@@ -48,7 +53,8 @@ def train_step(
         optimizer: AdamW,
         scaler: GradScaler,
         dataloader: DataLoader,
-        grad_acc_steps: int
+        grad_acc_steps: int,
+        use_cfg: bool = False
 ) -> dict:
     model.lm.train()
     device = model.device
@@ -68,9 +74,11 @@ def train_step(
                 text_l.append(label_f.read().strip())
         
         codes = torch.cat(codes_l, dim=0).to(device)
+        if use_cfg:
+            codes = torch.cat([codes, codes], dim=0)
 
         attributes, _ = model._prepare_tokens_and_attributes(text_l, None)
-        conditional_vector = get_contitional_vector(model, attributes)
+        conditional_vector = get_contitional_vector(model, attributes, use_cfg=False)
 
         with torch.autocast(device_type="cuda", dtype=torch.float16):
             lm_output = model.lm.compute_predictions(
