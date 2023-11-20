@@ -11,22 +11,25 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-RUN_NAME = 'eyedazzler_no_voice_574_1000'
-DATA_DIR = './data/eyedazzler/chunks_no_voice'
+PROJECT_NAME = 'eyedazzler-voice'
+RUN_NAME = 'eyedazzler'
+DATA_DIR = './data/eyedazzler/chunks_original'
 CHECKPOINT_DIR = './checkpoints'
-START_WEIGHTS = './experimental_results/eyedazzler/no_voice_574_epochs/checkpoint_574.pth'
+MODEL = 'small'
+START_WEIGHTS = None
 TOTAL_DATA_RATIO = 1.0
 EVAL_DATA_RATIO = 0
 EPOCHS = 1000
-BATCH_SIZE = 1
-GRAD_ACC_STEPS = 16
-LR = 1e-5
+BATCH_SIZE = 16
+GRAD_ACC_STEPS = 1
+LR = 1e-4
 
 run = wandb.init(
-    project = 'personal-musicgen',
+    project = PROJECT_NAME,
     name = RUN_NAME,
     config = {
         'dataset': DATA_DIR,
+        'model': MODEL,
         'start_weights': START_WEIGHTS,
         'total_data_ratio': TOTAL_DATA_RATIO,
         'eval_data_ratio': EVAL_DATA_RATIO,
@@ -64,7 +67,9 @@ if EVAL_DATA_RATIO > 0:
 
 ########## Model Setup ##########
 
-model = MusicGen.get_pretrained('small')
+torch.cuda.empty_cache()
+
+model = MusicGen.get_pretrained(MODEL)
 model.lm = model.lm.to(torch.float32)
 device = model.device
 
