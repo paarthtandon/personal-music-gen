@@ -142,7 +142,6 @@ def eval_step(
 def generate(
         model: MusicGen,
         text_prompt: str,
-        n_extensions: int,
         temp: float = 1.0,
         top_k: int= 250,
         top_p: float = 0.0
@@ -158,15 +157,8 @@ def generate(
     }
 
     attributes, prompt_tokens = model._prepare_tokens_and_attributes([text_prompt], None)
-    gen_chunks = []
-    for _ in tqdm(range(n_extensions)):
-        with model.autocast:
-            gen_tokens = model.lm.generate(prompt_tokens, attributes, callback=None, **model.generation_params)
-            gen_chunks.append(
-                gen_tokens[..., prompt_tokens.shape[-1] if prompt_tokens is not None else 0:]
-            )
-            prompt_tokens = gen_tokens[..., -gen_tokens.shape[-1] // 2:]
-    gen_tokens = torch.cat(gen_chunks, -1)
+    with model.autocast:
+        gen_tokens = model.lm.generate(prompt_tokens, attributes, callback=None, **model.generation_params)
 
     with torch.no_grad():
         gen_audio = model.compression_model.decode(gen_tokens, None)
