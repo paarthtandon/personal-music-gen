@@ -3,9 +3,9 @@ from pathlib import Path
 from personal_musicgen.data.postprocess import Postprocessor
 from tqdm import tqdm
 
-source_dir = 'data/eyedazzler/wav_32k/'
-original_dir = 'data/eyedazzler/chunks_original'
-no_voice_dir = 'data/eyedazzler/chunks_no_voice'
+source_dir = 'data/dubstep/wav_32k/'
+original_dir = 'data/dubstep/chunks_original'
+no_voice_dir = 'data/dubstep/chunks_no_voice'
 
 Path(original_dir).mkdir(exist_ok=True)
 Path(no_voice_dir).mkdir(exist_ok=True)

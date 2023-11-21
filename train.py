@@ -11,9 +11,9 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-PROJECT_NAME = 'eyedazzler-voice'
-RUN_NAME = 'eyedazzler'
-DATA_DIR = './data/eyedazzler/chunks_original'
+PROJECT_NAME = 'dubstep'
+RUN_NAME = 'normal'
+DATA_DIR = './data/dubstep/chunks_no_voice'
 CHECKPOINT_DIR = './checkpoints'
 MODEL = 'small'
 START_WEIGHTS = None
@@ -22,7 +22,7 @@ EVAL_DATA_RATIO = 0
 EPOCHS = 1000
 BATCH_SIZE = 16
 GRAD_ACC_STEPS = 1
-LR = 1e-4
+LR = 1e-5
 
 run = wandb.init(
     project = PROJECT_NAME,
