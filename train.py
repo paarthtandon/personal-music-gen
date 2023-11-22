@@ -1,6 +1,7 @@
 import torch
 from torch.optim import AdamW
 from torch.cuda.amp import GradScaler
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader, Subset
 import os
 
@@ -11,9 +12,9 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-PROJECT_NAME = 'dubstep'
-RUN_NAME = 'normal'
-DATA_DIR = './data/dubstep/chunks_no_voice'
+PROJECT_NAME = 'eyedazzler'
+RUN_NAME = 'no-voice'
+DATA_DIR = './data/eyedazzler/chunks_no_voice'
 CHECKPOINT_DIR = './checkpoints'
 MODEL = 'small'
 START_WEIGHTS = None
@@ -89,6 +90,7 @@ if START_WEIGHTS != None:
     optimizer.load_state_dict(torch.load(START_WEIGHTS)['optimizer_state_dict'])
 
 scaler = GradScaler()
+scheduler = CosineAnnealingLR(optimizer, T_max=10)
 
 ########## Training ##########
 
@@ -105,7 +107,8 @@ for epoch in range(start_epoch, EPOCHS):
         optimizer,
         scaler,
         train_dataloader,
-        GRAD_ACC_STEPS
+        GRAD_ACC_STEPS,
+        scheduler = scheduler
     )['train_loss']
 
     wandb.log({

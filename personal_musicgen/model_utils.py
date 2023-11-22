@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.optim import AdamW
 from torch.cuda.amp import GradScaler
+from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch.utils.data import DataLoader
 import torchaudio
 
@@ -54,7 +55,8 @@ def train_step(
         scaler: GradScaler,
         dataloader: DataLoader,
         grad_acc_steps: int,
-        use_cfg: bool = False
+        use_cfg: bool = False,
+        scheduler: CosineAnnealingLR = None
 ) -> dict:
     model.lm.train()
     device = model.device
@@ -101,6 +103,8 @@ def train_step(
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
+                if scheduler is not None:
+                    scheduler.step()
 
     return {
         'train_loss': total_loss / len(dataloader)
