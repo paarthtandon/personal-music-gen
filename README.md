@@ -1,5 +1,7 @@
 # Personal MusicGen Trainer
 
+![model](img.png)
+
 [MusicGen](https://ai.honu.io/papers/musicgen/) is a music generation model developed by Meta.
 This project sets up a pipeline for fine-tuning MusicGen on a personal dataset.
 
@@ -46,6 +48,10 @@ I also have scripts that prepare the files before training.
 ## Training
 
 `train.py` is an example training script that uses `wandb` for experiment organization.
+
+## Generation
+
+`notebooks/generation_test.ipynb` contains examples on how to generate samples from the model after it has been trained.
 
 ## Experimental Results
 
