@@ -12,9 +12,9 @@ from personal_musicgen.model_utils import train_step, eval_step
 import wandb
 wandb.login()
 
-PROJECT_NAME = 'eyedazzler'
-RUN_NAME = 'no-voice'
-DATA_DIR = './data/eyedazzler/chunks_no_voice'
+PROJECT_NAME = 'always'
+RUN_NAME = 'voice-encodec'
+DATA_DIR = './data/always/chunks_original'
 CHECKPOINT_DIR = './checkpoints'
 MODEL = 'small'
 START_WEIGHTS = None
@@ -23,7 +23,7 @@ EVAL_DATA_RATIO = 0
 EPOCHS = 1000
 BATCH_SIZE = 16
 GRAD_ACC_STEPS = 1
-LR = 1e-5
+LR = 1e-4
 
 run = wandb.init(
     project = PROJECT_NAME,
@@ -80,7 +80,9 @@ if START_WEIGHTS != None:
 print(f'{device=}')
 
 optimizer = AdamW(
-    model.lm.condition_provider.parameters(),
+    list(model.lm.condition_provider.parameters()) + \
+    list(model.compression_model.encoder.parameters()) + \
+    list(model.compression_model.decoder.parameters()),
     lr=LR,
     betas=(0.9, 0.95),
     weight_decay=0.1,

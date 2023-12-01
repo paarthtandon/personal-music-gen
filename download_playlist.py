@@ -3,8 +3,8 @@ import os
 from dotenv import load_dotenv
 from personal_musicgen.data import connectors
 
-DATA_DIR = './data/dubstep/mp3/'
-ALBUM_ID = '174KCQDVSDoi9WudbkRdHX'
+DATA_DIR = './data/always/mp3/'
+PLAYLIST_ID = '496ea8f7yhFss7p12HDKAL'
 
 load_dotenv()
 
@@ -17,7 +17,7 @@ track_strings = connectors.get_playlist_tracks_spotify(
     client_id,
     client_secret,
     'https://paarthtandon.com/',
-    ALBUM_ID
+    PLAYLIST_ID
 )
 
 print(f'Downloading {len(track_strings)} tracks from YouTube...')
